@@ -35,6 +35,9 @@ def printGroup(addr) -> str:
 
 
 def printValue(buffer, rlen) -> str:
+    """
+    converts buffer to hex string representation
+    """
     ret = None
     if buffer[1] & 0xC0:
         if rlen == 2:
@@ -56,7 +59,7 @@ def printHex(len, buf) -> str:
     return ret
 
 
-def readaddr(addr):
+def readaddr(addr) -> int:
     ret = None
     r = re.compile('[./]').split(addr)
 
@@ -65,12 +68,12 @@ def readaddr(addr):
     elif len(r) == 1:
         ret = int(r[0]) & 0xffff
     else:
-        die("invalid individual address %s" % addr)
+        raise ValueError("invalid individual address %s" % addr)
 
     return ret
 
 
-def readgaddr(addr):
+def readgaddr(addr) -> int:
     ret = None
     r = re.compile('[./]').split(addr)
 
@@ -81,18 +84,19 @@ def readgaddr(addr):
     elif len(r) == 1:
         ret = int(r[0]) & 0xffff
     else:
-        die("invalid group address format %s" % addr)
+        raise ValueError("invalid group address format %s" % addr)
 
     return ret
 
 
 def readBlock(buf, vals):
+    """
+    converts hex representation of values into buffer representing values as int
+    :param buf:     buffer to be filled for transmission
+    :param vals:    values as list to be converted
+    :return:        1. value: buffer for transmission, 2. value: number of values in buffer
+    """
     i = 0
     for i in range(2, len(buf)):
         buf[i] = readHex(vals[i - 2])
     return buf, i
-
-
-def die(msg):
-    print(msg)
-    exit(1)

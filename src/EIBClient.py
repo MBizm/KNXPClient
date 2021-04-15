@@ -108,8 +108,9 @@ class _EIBClient(EIBClient):
     def GroupCache_Read(self, addrSrc):
         """
         reads value from local cache
-        :param addrSrc: KNX address with "/" separator
-        :return: current value in cache
+        :param      addrSrc: KNX address with "/" separator
+        :return:    string representation of hexified value in cache
+        :raises:    ValueError
         """
         buf = EIBBuffer()
         src = EIBAddr()
@@ -120,7 +121,10 @@ class _EIBClient(EIBClient):
                                                    buf)
 
         if rlen == -1:
-            die("Read failed - " + os.strerror(self.__EIBConnection.errno))
+            raise ValueError("Read failed - " + os.strerror(self.__EIBConnection.errno))
+        elif len(buf.buffer) < 2:
+            raise ValueError("Buffer size too small - {0}: {1}".format(addrSrc,
+                                                          buf.buffer))
 
         return printValue(buf.buffer, rlen)
 
@@ -133,14 +137,14 @@ class _EIBClient(EIBClient):
 
         lbuf, length = readBlock(lbuf, vals)
         if length < 0:
-            die("Invalid hex bytes")
+            raise ValueError("Invalid hex bytes")
 
         if self.__EIBConnection.EIBOpenT_Group(readgaddr(addrDest), 1) == -1:
-            die("Connect failed")
+            raise ConnectionError("Connect failed")
 
         length = self.__EIBConnection.EIBSendAPDU(lbuf)
         if length == -1:
-            die("Request failed")
+            raise ConnectionError("Send request failed")
 
         # report success
         return 1
@@ -248,7 +252,7 @@ class _EIBClientMonitor(threading.Thread):
 
     @staticmethod
     def __informListener(listener, buf, dest, src):
-        listener.updateOccurred(src.data, repr(buf.buffer))
+        listener.updateOccurred(src.data, buf.buffer)
 
     @staticmethod
     def register(listener):
