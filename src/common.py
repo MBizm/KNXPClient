@@ -34,7 +34,18 @@ def printGroup(addr) -> str:
                                 addr & 0xff)
 
 
-def readHex(val) -> str:
+def printValue(buffer, rlen) -> str:
+    ret = None
+    if buffer[1] & 0xC0:
+        if rlen == 2:
+            ret = "%02X" % (buffer[1] & 0x3F)
+        else:
+            ret = printHex(rlen - 2, buffer[2:])
+    # remove trailing blanks
+    return ret.strip()
+
+
+def readHex(val) -> int:
     return int(val, 16)
 
 
@@ -78,7 +89,7 @@ def readgaddr(addr):
 def readBlock(buf, vals):
     i = 0
     for i in range(2, len(buf)):
-        buf[i] = readHex(vals[i-2])
+        buf[i] = readHex(vals[i - 2])
     return buf, i
 
 
