@@ -95,9 +95,6 @@ class EIBClient(object):
     def Group_Write_DPTVal(self, addrDest, val):
         raise NotImplementedError
 
-    def Group_Write_DecVal(self, addrDest, dptType, val):
-        raise NotImplementedError
-
 
 class _EIBClient(EIBClient):
     """
@@ -148,10 +145,6 @@ class _EIBClient(EIBClient):
 
         # report success
         return 1
-
-    def Group_Write_DecVal(self, addrDest, dptType, val):
-        # TODO
-        pass
 
 
 class EIBClientFactory(object):
