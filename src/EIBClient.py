@@ -121,7 +121,7 @@ class _EIBClient(EIBClient):
             raise ValueError("Read failed - " + os.strerror(self.__EIBConnection.errno))
         elif len(buf.buffer) < 2:
             raise ValueError("Buffer size too small - {0}: {1}".format(addrSrc,
-                                                          buf.buffer))
+                                                                       buf.buffer))
 
         return printValue(buf.buffer, rlen)
 
@@ -232,16 +232,20 @@ class _EIBClientMonitor(threading.Thread):
         dest = EIBAddr()
         while con.EIBGetGroup_Src(buf, src, dest):
             listener = self.findListener(gaddrInt=dest.data)
-            # check whether listener for destination exists
-            if listener and isinstance(listener, list):
-                for rl in listener:
-                    self.__informListener(rl, buf, dest, src)
-            elif listener:
-                self.__informListener(listener, buf, dest, src)
-
+            # only for debug
+            print(dest.data)
             # print("%s(%s) > %s(%s): %s" % (printGroup(src.data), src.data,
             #                                printGroup(dest.data), dest.data,
             #                                repr(buf.buffer)))
+            # continue in case no listener registered for destination
+            if listener is None:
+                continue
+            # check whether multiple listeners for destination exists
+            if listener and isinstance(listener, list):
+                for rl in listener:
+                    self.__informListener(rl, buf, dest, src)
+            else:
+                self.__informListener(listener, buf, dest, src)
 
     @staticmethod
     def __informListener(listener, buf, dest, src):
@@ -250,12 +254,20 @@ class _EIBClientMonitor(threading.Thread):
     @staticmethod
     def register(listener):
         m = _EIBClientMonitor()
+
+        # start thread once, temporary solution - see remarks below
+        if len(m.__listenerList) == 0:
+            m.start()
+
         if not m.findListener(listener):
             m.__listenerList.append(listener)
 
+            # TODO for now is_alive() is not accurate enough and starts thread multiple times
+            #       see https://stackoverflow.com/questions/67099275/threadings-is-alive-method-not-returning-accurate-state
+            #       let's use listenerList size for now as the criteria to start the thread
             # initialize monitor in separate thread if not yet running
-            if not m.is_alive():
-                m.start()
+            # if not m.is_alive():
+            #    m.start()
 
     @staticmethod
     def unregister(listener):
@@ -272,12 +284,12 @@ class _EIBClientMonitor(threading.Thread):
         :type listener:     EIBClientListener
         :param gaddrInt:    group address under which listener instance is registered
         :type gaddrInt:     int
-        :return:            listener instance or a list of listeners if multiple are registered for the same group address
+        :return:            list of one or multiple listeners registered for the same group address, None if not registered for address
         """
         ret = None
         if listener and listener in _EIBClientMonitor.__listenerList:
-            ret = listener
-        elif gaddrInt >= 0:
+            ret = [listener, ]
+        if gaddrInt >= 0:
             for rl in _EIBClientMonitor.__listenerList:
                 if rl.gaddrInt == gaddrInt:
                     # append matching listener instances
@@ -306,13 +318,12 @@ if __name__ == '__main__':
     class MyEIBClientListener(EIBClientListener):
         def updateOccurred(self, srcAddr, val):
             print("### This is the value you were waiting for - FROM: {0} VALUE: {1}".format(printGroup(srcAddr), val))
-
     cf.registerListener(MyEIBClientListener('1/0/3'))
+
 
     # monitor same sample value twice
     class MyEIBClientListener2(EIBClientListener):
         def updateOccurred(self, srcAddr, val):
-            print("### This is also the value you were waiting for - FROM: {0} VALUE: {1}".format(printGroup(srcAddr), val))
-
+            print("### This is also the value you were waiting for - FROM: {0} VALUE: {1}".format(printGroup(srcAddr),
+                                                                                                  val))
     cf.registerListener(MyEIBClientListener2('1/0/3'))
-
