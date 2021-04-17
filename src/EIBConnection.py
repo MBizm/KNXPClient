@@ -27,6 +27,7 @@
 
 import errno
 import socket
+from threading import BoundedSemaphore
 
 
 class EIBBuffer:
@@ -57,6 +58,11 @@ class EIBInt32:
 
 
 class EIBConnection:
+    # EIBConnection is not multi-threading proof, multiple concurrent thread will result in unforeseen errors
+    # EIBConnection methods like EIB_CacheRead need to be treated atomar
+    # use one semaphore with 1 slot to be shared across threads
+    __connSemaphore = None
+
     def __init__(self):
         self.data = []
         self.readlen = 0
@@ -64,6 +70,7 @@ class EIBConnection:
         self.fd = None
         self.errno = 0
         self.__complete = None
+        self.__connSemaphore = BoundedSemaphore(value=1)
 
     def EIBSocketLocal(self, path):
         if self.fd != None:
@@ -395,9 +402,10 @@ class EIBConnection:
         return 0
 
     def EIB_Cache_Read(self, dst, src, buf):
-        if self.EIB_Cache_Read_async(dst, src, buf) == -1:
-            return -1
-        return self.EIBComplete()
+        with self.__connSemaphore:
+            if self.EIB_Cache_Read_async(dst, src, buf) == -1:
+                return -1
+            return self.EIBComplete()
 
     def __EIB_Cache_Read_Sync_Complete(self):
         self.__complete = None

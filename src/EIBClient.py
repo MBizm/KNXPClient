@@ -233,7 +233,6 @@ class _EIBClientMonitor(threading.Thread):
         while con.EIBGetGroup_Src(buf, src, dest):
             listener = self.findListener(gaddrInt=dest.data)
             # only for debug
-            print(dest.data)
             # print("%s(%s) > %s(%s): %s" % (printGroup(src.data), src.data,
             #                                printGroup(dest.data), dest.data,
             #                                repr(buf.buffer)))
