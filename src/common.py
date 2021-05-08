@@ -45,7 +45,10 @@ def printValue(buffer, rlen) -> str:
         else:
             ret = printHex(rlen - 2, buffer[2:])
     # remove trailing blanks
-    return ret.strip()
+    if ret is not None:
+        ret.strip()
+
+    return ret
 
 
 def readHex(val) -> int:
